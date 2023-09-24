@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamedev Canvas Workshop</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu+Mono&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --main-black: #000000;
+            --main-white: #ffffff;
+            --main-light-gray: #eeeeee;
+            --main-dark-gray: #aaaaaa;
+        }
+
+        body {
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+            background-color: var(--main-black);
+            font-family: 'Ubuntu Mono', monospace;
+        }
+
+        * {
+            padding: 0;
+            margin: 0;
+        }
+
+        canvas#windowCanvas {
+            position: relative;
+            top: 25px;
+            background: transparent;
+            border: 1px solid var(--main-white);
+            display: block;
+            margin: 0 auto;
+        }
+
+        canvas#dashboardCanvas {
+            position: relative;
+            top: 75px;
+            background: transparent;
+            border: 1px solid var(--main-white);
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="windowCanvas" width="760px" height="520px">
+    </canvas>
+    <canvas id="dashboardCanvas" width="760px" height="260px"></canvas>
+    <script>
+        // get current date
+        let startDate = Date.now();
+        console.log(startDate);
+
+        // Main window
+        let windowCanvas = document.getElementById("windowCanvas");
+        let windowCtx = windowCanvas.getContext("2d");
+        let windowCanvasWidth = windowCanvas.width;
+        let windowCanvasHeight = windowCanvas.height;
+        let windowCanvasX = windowCanvas.getBoundingClientRect().x;
+        let windowCanvasY = windowCanvas.getBoundingClientRect().y;
+
+
+        // Dashboard
+        let dashboardCanvas = document.getElementById("dashboardCanvas");
+        let dashboardCtx = dashboardCanvas.getContext("2d");
+        let dashboardCanvasWidth = dashboardCanvas.width;
+        let dashboardCanvasHeight = dashboardCanvas.height;
+        let dashboardCanvasX = dashboardCanvas.getBoundingClientRect().x;
+        let dashboardCanvasY = dashboardCanvas.getBoundingClientRect().y;
+
+        const dashboardLineWidth = 2;
+        const dashboardStrokeStyle = "#FFFFFF";
+        const dashboardFillStyle = "#DD0000";
+        const dashboardInnerFillStyle = "#FFFFFF";
+        const dashboardFont = "42px PT Mono";
+        const dashboardFontColor = "#FFFFFF";
+        const dashboardFontWeight = "bold";
+        const toolSymbolWidth = 56;
+
+        let toolWidth = Math.round(dashboardCanvasWidth * 0.25);
+        let toolHeight = Math.round(dashboardCanvasHeight / 7);
+
+        const maxRocketsNum = 4;
+
+
+        // Ship
+        /*
+        var nodes = //Вершины
+            [
+                [-1, -2, -1],   // 0
+                [-1, -2, 1],    // 1
+                [-1, 2, -1],    // 2
+                [-1, 2, 1],     // 3
+                [1, -2, -1],    // 4
+                [1, -2, 1],     // 5
+                [1, 2, -1],     // 6
+                [1, 2, 1],      // 7
+
+                [-5, 2, 0],     // 8
+                [-6, -2, 0],    // 9
+                [5, 2, 0],      // 10
+                [6, -2, 0],     // 11
+
+                [1, 6, 0],       // Nose 12
+                [-1, 6, 0]       // Nose 13
+            ];
+        var edges = //грани
+            [
+                [1, 3],
+                [2, 0],
+
+                [5, 7],
+                [6, 4],
+
+                [8, 9],
+                [10, 11],
+
+                [8, 2],
+                [8, 3],
+                [9, 1],
+                [9, 0],
+
+                [10, 6],
+                [10, 7],
+                [11, 5],
+                [11, 4],
+
+                [0, 4],
+                [1, 5],
+                [2, 6],
+                [3, 7],
+
+                [12, 13],
+
+                [8, 13],
+                [10, 12],
+
+                [2, 13],
+                [3, 13],
+
+                [6, 12],
+                [7, 12]
+            ];
+        */
+        var nodes = [
+            [0, -4, -3],    // 0
+            [0, -4, 3],     // 1
+
+            [-10, -4, -2],  // 2
+            [-10, -4, 2],   // 3
+
+            [10, -4, -2],   // 4
+            [10, -4, 2],    // 5
+
+            [-16, -4, 0],   // 6
+            [16, -4, 0],    // 7
+
+            [-16, 0, 0],    // 8
+            [16, 0, 0],     // 9
+
+            [-4, 16, 0],    // 10
+            [4, 16, 0],     // 11
+
+            [0, 10, 4],     // 12 Cabin
+
+            [0, 16, 0],     // 13 Gun
+            [0, 20, 0],     // 14 Gun
+        ];
+
+        var edges = [
+            [0, 2],
+            [0, 4],
+
+            [1, 3],
+            [1, 5],
+
+            [2, 6],
+            [3, 6],
+
+            [3, 8],
+            [5, 9],
+            [3, 10],
+            [5, 11],
+
+
+            [4, 7],
+            [5, 7],
+
+            [6, 8],
+            [7, 9],
+
+            [8, 10],
+            [9, 11],
+
+            [10, 11],
+
+            // connecting cabin
+            [1, 12],
+            [3, 12],
+            [5, 12],
+            [12, 10],
+            [12, 11],
+
+            // connecting gun
+            [13, 14]
+
+        ];
+
+
+        let start = false;
+
+        // ball
+        const ballRadius = 10;
+        let ballColor = "#DD95DD";
+
+
+        // paddle
+        const paddleHeight = 10;
+        const paddleWidth = 75;
+        let paddleX = (dashboardCanvas.width - paddleWidth) / 2;
+
+
+        // bricks
+        const brickTypes = {
+            1: {
+                color: "#0095DD",
+                density: 0
+            },
+            2: {
+                color: "#DD0095",
+                density: 1
+            }
+        }
+
+
+        const brickRowCount = 2;
+        const brickColumnCount = 10;
+        const brickPadding = 5;
+        const brickOffsetTop = 5;
+        const brickOffsetLeft = 5;
+        const brickOffsetRight = 5;
+
+        const bricks = [];
+
+        let brickWidth = (dashboardCanvas.width - brickOffsetLeft - brickOffsetRight + brickPadding) / brickColumnCount - brickPadding;
+        let brickHeight = dashboardCanvas.height / 30;
+
+        let brickCounter = 0;
+
+
+        let x = paddleX + paddleWidth / 2; // ? 
+        let y = dashboardCanvas.height - ballRadius - paddleHeight;
+
+        let dx = 3;
+        let dy = -3;
+
+        const randomValueX = dx * 0.1;
+        const randomValueY = dy * 0.1;
+
+        if (x + dx < ballRadius) x = ballRadius;
+        if (x + dx > dashboardCanvas.width - ballRadius) x = dashboardCanvas.width - ballRadius;
+
+        if (y + dy < ballRadius) y = ballRadius;
+        if (y + dy > dashboardCanvas.height - ballRadius) y = dashboardCanvas.height - ballRadius;
+
+        // paddle
+        let rightPressed = false;
+        let leftPressed = false;
+
+        let gameOver = false;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            let windowWidth = window.innerWidth;
+            let windowHeight = window.innerHeight;
+
+
+            windowCanvas.width = windowWidth - 50;
+            windowCanvas.height = Math.round(windowHeight * 0.65) - 50;
+            windowCanvasWidth = windowCanvas.width;
+            windowCanvasHeight = windowCanvas.height;
+            windowCanvasX = windowCanvas.getBoundingClientRect().x;
+            windowCanvasY = windowCanvas.getBoundingClientRect().y;
+            console.log("windowCanvasX: " + windowCanvasX + " | windowCanvasY: " + windowCanvasY);
+
+            dashboardCanvas.width = windowWidth - 50;
+            dashboardCanvas.height = Math.round(windowHeight * 0.35) - 50;
+            dashboardCanvasWidth = dashboardCanvas.width;
+            dashboardCanvasHeight = dashboardCanvas.height;
+            dashboardCanvasX = dashboardCanvas.getBoundingClientRect().x;
+            dashboardCanvasY = dashboardCanvas.getBoundingClientRect().y;
+            console.log("dashboardCanvasX: " + dashboardCanvasX + " | dashboardCanvasY: " + dashboardCanvasY);
+
+            // dashboard
+            toolWidth = Math.round(dashboardCanvasWidth * 0.25);
+            toolHeight = Math.round(dashboardCanvasHeight / 7);
+
+            // paddle
+            paddleX = (dashboardCanvas.width - paddleWidth) / 2;
+
+            x = paddleX + paddleWidth / 2;
+            y = dashboardCanvas.height - ballRadius - paddleHeight;
+
+            brickWidth = (dashboardCanvas.width - brickOffsetLeft - brickOffsetRight + brickPadding) / brickColumnCount - brickPadding;
+            brickHeight = dashboardCanvas.height / 30;
+
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    // get random status
+                    let status = Math.random() >= 0.5;
+                    let curBrickType = Math.random() >= 0.5 ? 1 : 2;
+                    bricks[c][r] = { x: 0, y: 0, status: status, density: brickTypes[curBrickType].density, color: brickTypes[curBrickType].color };
+                    if (status === true) brickCounter++;
+                }
+            }
+
+            dashboardCtx.clearRect(0, 0, dashboardCanvas.width, dashboardCanvas.height);
+
+            drawDashboard();
+            updateForeShield(50);
+            updateAftShield(90);
+            updateFuel(70);
+            updateCabinTemp(10);
+            updateLaserTemp(0);
+            updateAltimeter(100);
+            updateRocket(maxRocketsNum);
+
+            updateSpeed(99);
+            updateRoll(0);
+            updateDive(0);
+            updateEnergyCell1(0);
+            updateEnergyCell2(40);
+            updateEnergyCell3(100);
+            updateEnergyCell4(100);
+
+
+
+            var size = Math.min(windowCanvasWidth, windowCanvasHeight);
+            scale(size / 64, size / 64, size / 64); //масштаб указан здесь!
+            rotateCuboid(30, 30, 0); //угол определён здесь!
+            setInterval(function () {
+                rotateCuboid(0, 0.01, 0.01); // - Math.PI / 180 поворот при вращении задан здесь!
+                drawCuboid();
+            }, 20);
+
+            // dashboardCtx.clearRect(0, 0, dashboardCanvas.width, dashboardCanvas.height);
+            // drawBricks();
+            // drawBall();
+            // drawPaddle();
+
+            document.addEventListener("keydown", keyDownHandler, false);
+            document.addEventListener("keyup", keyUpHandler, false);
+
+            document.addEventListener('keydown', (e) => {
+                if (e.code === "Space" && start === false) {
+                    start = true;
+                    draw();
+                }
+            });
+        });
+
+        function drawDashboard() {
+            console.log("drawDashboard");
+            // left side
+            drawForeShield();
+            drawAftShield();
+            drawFuel();
+            drawCabinTemp();
+            drawLaserTemp();
+            drawALtimeter();
+            drawRockets();
+
+            // right side
+            drawSpeed();
+            drawRoll();
+            drawDive();
+            drawEnergyCell1();
+            drawEnergyCell2();
+            drawEnergyCell3();
+            drawEnergyCell4();
+        }
+
+        // draw left side of dashboard
+        const drawForeShield = () => {
+            console.log("drawForeShield");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, 0, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, 0, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('FS', dashboardLineWidth, toolHeight - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawAftShield = () => {
+            console.log("drawAftShield");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, toolHeight, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, toolHeight, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, toolHeight + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('AS', dashboardLineWidth, toolHeight * 2 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawFuel = () => {
+            console.log("drawFuel");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, toolHeight * 2, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, toolHeight * 2, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, toolHeight * 2 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('FU', dashboardLineWidth, toolHeight * 3 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawCabinTemp = () => {
+            console.log("drawCabinTemp");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, toolHeight * 3, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, toolHeight * 3, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, toolHeight * 3 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('CT', dashboardLineWidth, toolHeight * 4 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawLaserTemp = () => {
+            console.log("drawLaserTemp");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, toolHeight * 4, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, toolHeight * 4, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, toolHeight * 4 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('LT', dashboardLineWidth, toolHeight * 5 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawALtimeter = () => {
+            console.log("drawALtimeter");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, toolHeight * 5, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, toolHeight * 5, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, toolHeight * 5 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('AL', dashboardLineWidth, toolHeight * 6 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawRockets = () => {
+            console.log("drawRockets");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(0, toolHeight * 6, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(0, toolHeight * 6, toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(toolSymbolWidth + dashboardLineWidth, toolHeight * 6 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('RO', dashboardLineWidth, toolHeight * 7 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+
+        // draw right side of dashboard
+        const drawSpeed = () => {
+            console.log("drawSpeed");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, 0, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, 0, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('SP', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth, toolHeight - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawRoll = () => {
+            console.log("drawRoll");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, toolHeight + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('RL', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth, toolHeight * 2 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawDive = () => {
+            console.log("drawDive");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 2, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 2, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, toolHeight * 2 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('DC', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth, toolHeight * 3 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawEnergyCell1 = () => {
+            console.log("drawEnergyCell1");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 3, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 3, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, toolHeight * 3 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+            dashboardCtx.fillText('1', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth + 15, toolHeight * 4 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawEnergyCell2 = () => {
+            console.log("drawEnergyCell2");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 4, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 4, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, toolHeight * 4 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+
+            dashboardCtx.fillText('2', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth + 15, toolHeight * 5 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawEnergyCell3 = () => {
+            console.log("drawEnergyCell3");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 5, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 5, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, toolHeight * 5 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+
+            dashboardCtx.fillText('3', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth + 15, toolHeight * 6 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+        const drawEnergyCell4 = () => {
+            console.log("drawEnergyCell4");
+            dashboardCtx.beginPath();
+
+            dashboardCtx.lineWidth = dashboardLineWidth;
+            dashboardCtx.strokeStyle = dashboardStrokeStyle;
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 6, toolWidth, toolHeight);
+            dashboardCtx.strokeRect(dashboardCanvasWidth - toolWidth, toolHeight * 6, toolWidth - toolSymbolWidth, toolHeight);
+
+            dashboardCtx.fillStyle = dashboardFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth + dashboardLineWidth, toolHeight * 6 + dashboardLineWidth, toolWidth - toolSymbolWidth - dashboardLineWidth * 2, toolHeight - dashboardLineWidth * 2);
+
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+
+            dashboardCtx.font = dashboardFont;
+            dashboardCtx.fillStyle = dashboardFontColor;
+            dashboardCtx.fontWeight = dashboardFontWeight;
+
+            dashboardCtx.fillText('4', dashboardCanvasWidth - toolSymbolWidth + dashboardLineWidth + 15, toolHeight * 7 - dashboardLineWidth * 2, toolSymbolWidth - dashboardLineWidth * 2);
+        }
+
+
+
+        // update dashboard
+        updateForeShield = (value) => {
+            console.log("updateForeShield");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(toolSymbolWidth, toolHeight * 0 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateAftShield = (value) => {
+            console.log("updateAftShield");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(toolSymbolWidth, toolHeight * 1 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateFuel = (value) => {
+            console.log("updateFuel");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(toolSymbolWidth, toolHeight * 2 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateCabinTemp = (value) => {
+            console.log("updateCabinTemp");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(toolSymbolWidth, toolHeight * 3 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateLaserTemp = (value) => {
+            console.log("updateLaserTemp");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(toolSymbolWidth, toolHeight * 4 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateAltimeter = (value) => {
+            console.log("updateAltimeter");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(toolSymbolWidth, toolHeight * 5 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateRocket = (value) => {
+            console.log("updateRocket");
+            for (let i = 0; i < value; i++) {
+                dashboardCtx.beginPath();
+                dashboardCtx.fillStyle = dashboardInnerFillStyle;
+                dashboardCtx.rect(toolSymbolWidth + i * (Math.round((toolWidth - toolSymbolWidth) / maxRocketsNum)) + 10, toolHeight * 6 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) / maxRocketsNum) - 20, toolHeight - dashboardLineWidth * 6);
+                dashboardCtx.fill();
+                dashboardCtx.closePath();
+            }
+        }
+        updateSpeed = (value) => {
+            console.log("updateSpeed");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth, toolHeight * 0 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateRoll = (value) => {
+            console.log("updateRoll");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(((dashboardCanvasWidth - (toolWidth + toolSymbolWidth) / 2) - 2) + (value * (((toolWidth - toolSymbolWidth) / 2) - 2) / 100), toolHeight * 1 + dashboardLineWidth * 3, 4, toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateDive = (value) => {
+            console.log("updateDive");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(((dashboardCanvasWidth - (toolWidth + toolSymbolWidth) / 2) - 2) + (value * (((toolWidth - toolSymbolWidth) / 2) - 2) / 100), toolHeight * 2 + dashboardLineWidth * 3, 4, toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateEnergyCell1 = (value) => {
+            console.log("updateEnergyCell1");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth, toolHeight * 3 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateEnergyCell2 = (value) => {
+            console.log("updateEnergyCell2");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth, toolHeight * 4 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateEnergyCell3 = (value) => {
+            console.log("updateEnergyCell3");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth, toolHeight * 5 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+        updateEnergyCell4 = (value) => {
+            console.log("updateEnergyCell4");
+            dashboardCtx.beginPath();
+            dashboardCtx.fillStyle = dashboardInnerFillStyle;
+            dashboardCtx.rect(dashboardCanvasWidth - toolWidth, toolHeight * 6 + dashboardLineWidth * 3, Math.round((toolWidth - toolSymbolWidth) * value / 100), toolHeight - dashboardLineWidth * 6);
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+
+
+
+        function scale(factor0, factor1, factor2) { //масштабирование по осям
+            nodes.forEach(function (node) {
+                node[0] *= factor0; node[1] *= factor1; node[2] *= factor2;
+            });
+        }
+
+        function rotateCuboid(angleX, angleY, angleZ) { //пересчёт координат вершин для вращения
+            var sinX = Math.sin(angleX);
+            var cosX = Math.cos(angleX);
+            var sinY = Math.sin(angleY);
+            var cosY = Math.cos(angleY);
+            var sinZ = Math.sin(angleZ);
+            var cosZ = Math.cos(angleZ);
+            nodes.forEach(function (node) {
+                var x = node[0]; var y = node[1]; var z = node[2];
+                node[0] = x * cosX - z * sinX;
+                node[2] = z * cosX + x * sinX;
+                z = node[2];
+                node[1] = y * cosY - z * sinY;
+                node[2] = z * cosY + y * sinY;
+                x = node[0];
+                y = node[1];
+                node[0] = x * cosZ - y * sinZ;
+                node[1] = y * cosZ + x * sinZ;
+            });
+        }
+
+        function drawCuboid() {
+            windowCtx.save();
+            windowCtx.clearRect(0, 0, windowCanvasWidth, windowCanvasHeight); //очистить канву
+            drawTitles();
+            windowCtx.translate(windowCanvasWidth / 2, windowCanvasHeight / 2); //сместить в центр куба начало координат
+            windowCtx.strokeStyle = dashboardStrokeStyle //цвет граней
+            windowCtx.beginPath();
+            edges.forEach(function (edge) {
+                var p1 = nodes[edge[0]];
+                var p2 = nodes[edge[1]];
+                windowCtx.moveTo(p1[0], p1[1]);
+                windowCtx.lineTo(p2[0], p2[1]);
+            });
+            windowCtx.closePath();
+            windowCtx.lineWidth = dashboardLineWidth;
+            windowCtx.stroke();
+            windowCtx.restore();
+        }
+
+
+
+        const drawTitles = () => {
+            let title = '- - - - E L I T E - - - -';
+            windowCtx.font = dashboardFont;
+            windowCtx.fillStyle = dashboardFontColor;
+            windowCtx.fontWeight = dashboardFontWeight;
+            console.log(windowCtx.measureText(title));
+            let titleWidth = windowCtx.measureText(title).width;
+            let titleHeght = windowCtx.measureText(title).actualBoundingBoxAscent + windowCtx.measureText(title).actualBoundingBoxDescent;
+            let titleX = windowCanvasWidth / 2 - titleWidth / 2;
+            let titleY = titleHeght + 20;
+            windowCtx.fillText(title, titleX, titleY, windowCanvasWidth / 2);
+
+
+            let title2 = 'L o a d   N e w   C o m m a n d e r   ( Y / N ) ?';
+            windowCtx.font = dashboardFont;
+            windowCtx.fillStyle = dashboardFontColor;
+            windowCtx.fontWeight = dashboardFontWeight;
+            console.log(windowCtx.measureText(title2));
+            let title2Width = windowCtx.measureText(title2).width;
+            let title2Heght = windowCtx.measureText(title2).actualBoundingBoxAscent + windowCtx.measureText(title2).actualBoundingBoxDescent;
+            let title2X = windowCanvasWidth / 2 - title2Width / 2;
+            let title2Y = windowCanvasHeight - title2Heght + 20;
+            windowCtx.fillText(title2, title2X, title2Y, windowCanvasWidth);
+        }
+
+
+
+        function keyDownHandler(e) {
+            if (e.key === "Right" || e.key === "ArrowRight") {
+                rightPressed = true;
+            } else if (e.key === "Left" || e.key === "ArrowLeft") {
+                leftPressed = true;
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === "Right" || e.key === "ArrowRight") {
+                rightPressed = false;
+            } else if (e.key === "Left" || e.key === "ArrowLeft") {
+                leftPressed = false;
+            }
+        }
+
+        function collisionDetection() {
+            let hit = false;
+            for (let c = 0; c < brickColumnCount; c++) {
+                if (hit === true) continue;
+                for (let r = 0; r < brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if (hit === true) continue;
+                    if (b.status === false) continue;
+                    if (y - ballRadius <= b.y + brickHeight && x + ballRadius >= b.x && x - ballRadius <= b.x + brickWidth) {
+                        dy = -dy;
+                        console.log("dy: " + dy);
+                        console.log("dx: " + dx);
+                        hit = true;
+                        if (b.density === 1) {
+                            b.density = 0;
+                            b.color = brickTypes[1].color;
+                        } else {
+                            b.status = false;
+                        }
+                        ballColor = b.color;
+                        console.log("hit");
+                        /*
+                        let random = Math.random() >= 0.5;
+                        // add random to dx and dy
+                        if (random) {
+                            dx = dx - randomValueX
+                            dx = parseFloat(dx).toFixed(2)
+                        } else {
+                            dx = dx + randomValueX
+                            dx = parseFloat(dx).toFixed(2)
+                        }
+                        if (random) {
+                            dy = dy + randomValueY
+                            dy = parseFloat(dy).toFixed(2)
+                        } else {
+                            dy = dy - randomValueY
+                            dy = parseFloat(dy).toFixed(2);
+                        }
+                        console.log("dx: " + dx + "  | dy: " + dy);
+                        */
+                    }
+                }
+            }
+        }
+
+        function drawBall() {
+            // get current date
+            let curDate = Date.now();
+            let diff = curDate - startDate;
+            // console.log("drawBall - " + diff);
+            dashboardCtx.beginPath();
+            dashboardCtx.arc(x, y, ballRadius, 0, Math.PI * 2);
+            dashboardCtx.fillStyle = ballColor;
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+
+        function drawPaddle() {
+            dashboardCtx.beginPath();
+            dashboardCtx.rect(paddleX, dashboardCanvas.height - paddleHeight, paddleWidth, paddleHeight);
+            dashboardCtx.fillStyle = "#0095DD";
+            dashboardCtx.fill();
+            dashboardCtx.closePath();
+        }
+
+
+        function draw() {
+            dashboardCtx.clearRect(0, 0, dashboardCanvas.width, dashboardCanvas.height);
+            // drawBricks();
+            drawBall();
+            drawPaddle();
+            collisionDetection();
+
+            let random = Math.random() >= 0.5;
+
+            if (gameOver === false) {
+                if (x + dx > dashboardCanvas.width - ballRadius || x + dx < ballRadius) {
+                    // add random to dx and dy
+                    if (random) {
+                        dx = dx + randomValueX
+                        dx = parseFloat(dx).toFixed(2)
+                    } else {
+                        dx = dx - randomValueX
+                        dx = parseFloat(dx).toFixed(2);
+                    }
+                    console.log("dx: " + dx);
+                    dx = -dx;
+                }
+                if (y + dy < ballRadius) {
+                    if (random) {
+                        dy = dy + randomValueY
+                        dy = parseFloat(dy).toFixed(2)
+                    } else {
+                        dy = dy - randomValueY
+                        dy = parseFloat(dy).toFixed(2);
+                    }
+                    console.log("dy: " + dy);
+                    dy = -dy;
+                } else if (y + dy > dashboardCanvas.height - ballRadius - paddleHeight + 2) {
+                    if (x > paddleX - ballRadius / 2 && x < paddleX + paddleWidth + ballRadius / 2) {
+                        dy = -dy;
+                        if (y + dy < ballRadius) y = ballRadius;
+                        else y = dashboardCanvas.height - ballRadius - paddleHeight;
+                    } else {
+                        gameOver = true;
+                        start = false;
+                        shmyakBall();
+                    }
+                }
+            }
+
+            // paddle
+            if (rightPressed) {
+                paddleX = Math.min(paddleX + 7, dashboardCanvas.width - paddleWidth);
+            } else if (leftPressed) {
+                paddleX = Math.max(paddleX - 7, 0);
+            }
+
+            x += dx;
+            y += dy;
+
+            if (start === true && gameOver === false) requestAnimationFrame(draw);
+        }
+
+        function drawBricks() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    const brickX = c * (brickWidth + brickPadding) + brickOffsetLeft;
+                    const brickY = r * (brickHeight + brickPadding) + brickOffsetTop;
+                    bricks[c][r].x = brickX;
+                    bricks[c][r].y = brickY;
+                    if (bricks[c][r].status === false) continue;
+                    dashboardCtx.beginPath();
+                    dashboardCtx.strokeRect(brickX, brickY, brickWidth, brickHeight);
+                    dashboardCtx.rect(brickX, brickY, brickWidth, brickHeight);
+                    dashboardCtx.fillStyle = bricks[c][r].color;
+                    dashboardCtx.strokeStyle = "#000";
+                    dashboardCtx.fill();
+                    dashboardCtx.closePath();
+                }
+            }
+        }
+
+        function shmyakBall() {
+            if (gameOver === true) {
+                console.log("shmyak");
+                dashboardCtx.clearRect(0, 0, dashboardCanvas.width, dashboardCanvas.height);
+                // drawBricks();
+                drawBall();
+                drawPaddle();
+                drawScore();
+                collisionDetection();
+
+                if (y + dy > dashboardCanvas.height - ballRadius) {
+                    gameOver = false;
+                    y = dashboardCanvas.height - ballRadius - paddleHeight;
+                    x = paddleX + paddleWidth / 2;
+                    dy = -Math.abs(dy);
+                    dx = Math.abs(dx);
+                    document.addEventListener('keydown', (e) => {
+                        if (e.code === "Space" && start === false) {
+                            start = true;
+                            requestAnimationFrame(draw)
+                        }
+                    });
+                } else {
+                    x += dx;
+                    y += dy;
+                    requestAnimationFrame(shmyakBall)
+                }
+            }
+        }
+
+        function random_rgba() {
+            var o = Math.round, r = Math.random, s = 255;
+            return 'rgba(' + o(r() * s) + ',' + o(r() * s) + ',' + o(r() * s) + ', 1)';
+        }
+
+    </script>
+</body>
+
+</html>
